@@ -51,9 +51,13 @@ jobs:
         run: |
           sudo -E .venv/bin/python scripts/bootstrap_database.py --user "$USER"
 
-      - name: Import the CSVs into PostgreSQL
+      - name: Import the CSVs into PostgreSQL twice
+        # The second run must replace the snapshot, not append to it. The test
+        # suite asserts exact row counts, so running the import twice here is
+        # what turns those assertions into a real idempotency check.
         run: |
           .venv/bin/python scripts/import_mimic.py --report research/module1/import-result.json
+          .venv/bin/python scripts/import_mimic.py --report research/module1/import-result-second-run.json
 
       - name: Byte-compile and run the test suite
         run: |
