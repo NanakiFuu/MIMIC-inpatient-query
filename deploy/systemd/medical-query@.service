@@ -1,0 +1,29 @@
+# Template unit for the local Nginx dual-instance demonstration.
+#
+# The instance name is the listen port, e.g.:
+#   systemctl start medical-query@8865
+#   systemctl start medical-query@8866
+#
+# Scope: SINGLE WSL2 machine, same code and the SAME PostgreSQL database as
+# medical-query.service. This is a local demonstration of failover, not a
+# production high-availability design. The absolute paths below are the local
+# demo machine layout (Linux user `nanaki`); adjust them for another host.
+[Unit]
+Description=MIMIC Demo inpatient fixed query API (instance %i)
+After=network.target postgresql@16-main.service
+
+[Service]
+Type=simple
+User=nanaki
+Group=nanaki
+WorkingDirectory=/mnt/d/Project/New-AI-Medical-Agent-Platform
+Environment=PYTHONPATH=/mnt/d/Project/New-AI-Medical-Agent-Platform/src
+ExecStart=/home/nanaki/environments/medical-query/.venv/bin/python -m uvicorn medical_query.api:app --host 127.0.0.1 --port %i --no-access-log
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

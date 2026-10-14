@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Public repository: allow-list.
+#
+# Everything at the top level is ignored by default. Only the paths listed
+# below are allowed into the repository, so anything that appears later stays
+# out until it is allowed here on purpose.
+#
+# The pattern must be "/*" and not "*". "*" also matches files inside the
+# allowed directories, and Git cannot re-include a file while a parent
+# directory of it is excluded, so a plain "*" would leave the allowed
+# directories empty.
+#
+# Nothing is deleted by these rules. Excluded files stay on disk; they are
+# simply not tracked. This is the working archive, not the published subset.
+# ---------------------------------------------------------------------------
+/*
+!/.gitignore
+!/.gitattributes
+!/.dockerignore
+!/.env.example
+!/.github/
+!/.vscode/
+!/Dockerfile
+!/README.md
+!/compose.yaml
+!/pyproject.toml
+!/requirements.lock.txt
+!/deploy/
+!/scripts/
+!/sql/
+!/src/
+!/tests/
+
+# The frozen 40-question evaluation set is an input, not an experiment output:
+# scripts/evaluate_model.py reads it and scripts/freeze_query_cases.py writes
+# it. Everything else under research/ stays local.
+!/research/
+/research/*
+!/research/module2/
+/research/module2/*
+!/research/module2/query-cases-v1.json
+
+# ---------------------------------------------------------------------------
+# Rules that apply inside the allowed directories.
+# ---------------------------------------------------------------------------
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+.env
+.env.*
+!.env.example
+*.log
+*.egg-info/
+build/
+dist/
+.local/
+.private/
+**/private/
+**/secrets/
+**/*.pem
+**/*.key
+**/database.json
+**/model.json
+**/*.dump
+**/*.csv
+**/*.csv.gz
+**/*.xlsx
+**/*.docx
+**/*.pdf
+mimic-iv-clinical-database-demo-*/
+research/environment/downloads/
+evidence/**/raw-journal*
+research/phase1/sources/
+research/**/sources/
+evidence/official-docs/*.txt

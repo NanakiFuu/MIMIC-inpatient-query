@@ -1,0 +1,27 @@
+# Default for everything not covered below: store as text, check out as LF.
+# Without this line, files with no rule here fall back to core.autocrlf and a
+# Windows checkout would turn them into CRLF; the systemd unit and the nginx
+# config are read directly from this working tree by WSL, so CRLF there is a
+# real risk. Rules further down override this one.
+* text=auto eol=lf
+
+*.py text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+Dockerfile text eol=lf
+.gitignore text eol=lf
+.dockerignore text eol=lf
+.env.example text eol=lf
+.gitattributes text eol=lf
+# Preserve measured raw output bytes; do not normalize experimental evidence.
+evidence/** -text
+evidence/** whitespace=-blank-at-eol,-blank-at-eof
+research/**/*.json -text
+research/**/*.xml -text
+research/** whitespace=-blank-at-eol,-blank-at-eof
+*.png binary
+*.jpg binary
+*.gz binary

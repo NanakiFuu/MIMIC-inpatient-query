@@ -1,0 +1,58 @@
+name: ${MEDICAL_QUERY_COMPOSE_PROJECT:-medical-query-demo}
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?Run scripts/prepare_compose.py}
+    user: postgres
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements']
+    environment:
+      POSTGRES_DB: medical_query_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Private .env required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${MEDICAL_QUERY_POSTGRES_PORT:-15432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d medical_query_demo']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    shm_size: 128mb
+    mem_limit: ${MEDICAL_QUERY_DB_MEM_LIMIT:-1g}
+    cpus: ${MEDICAL_QUERY_DB_CPUS:-1.0}
+  app:
+    image: medical-query-demo:0.3.0
+    build:
+      context: .
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:?Run scripts/prepare_compose.py}
+    user: '10001:10001'
+    environment:
+      MEDICAL_QUERY_DB_HOST: db
+      MEDICAL_QUERY_DB_PORT: '5432'
+      MEDICAL_QUERY_DB_PASSWORD: ${MEDICAL_QUERY_DB_PASSWORD:?Private .env required}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    ports:
+      - '127.0.0.1:${MEDICAL_QUERY_HTTP_PORT:-18765}:8765'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'python', '-c', "from urllib.request import urlopen; urlopen('http://127.0.0.1:8765/health/ready',timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${MEDICAL_QUERY_APP_MEM_LIMIT:-512m}
+    cpus: ${MEDICAL_QUERY_APP_CPUS:-1.0}
+volumes:
+  postgres_data:
+    name: ${MEDICAL_QUERY_COMPOSE_VOLUME:-medical-query-demo-postgres}

@@ -1,0 +1,83 @@
+# Continuous integration: run the project test suite and build the container image.
+#
+# NOT YET EXECUTED: this repository has not been pushed to GitHub, so this
+# workflow has never run. Every command it uses has been executed manually on
+# the development machine (download -> bootstrap -> import -> pytest -> docker
+# build); what remains unverified is the orchestration on a GitHub runner.
+#
+# The test suite needs the official MIMIC-IV demo 2.2 CSVs and a PostgreSQL
+# instance with that data imported, so the job provisions both instead of
+# skipping the database-backed tests.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PostgreSQL 16
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-16 postgresql-client-16
+          sudo systemctl start postgresql
+          for _ in $(seq 1 30); do pg_isready -h 127.0.0.1 -p 5432 && break; sleep 1; done
+          pg_isready -h 127.0.0.1 -p 5432
+
+      - name: Create virtualenv and install dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -c requirements.lock.txt -e ".[test]"
+          .venv/bin/python -m pip check
+
+      - name: Download the official MIMIC-IV demo 2.2 tables
+        run: |
+          .venv/bin/python scripts/download_mimic.py --directory mimic-iv-clinical-database-demo-2.2
+
+      - name: Provision the project database and roles
+        run: |
+          sudo -E .venv/bin/python scripts/bootstrap_database.py --user "$USER"
+
+      - name: Import the CSVs into PostgreSQL
+        run: |
+          .venv/bin/python scripts/import_mimic.py --report research/module1/import-result.json
+
+      - name: Byte-compile and run the test suite
+        run: |
+          .venv/bin/python -m compileall -q src scripts tests
+          .venv/bin/python -m pytest -q --junitxml=ci-tests.xml
+
+      - name: Upload the JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-junit
+          path: ci-tests.xml
+
+  image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the application image
+        # The Dockerfile takes the base image as a build argument with no
+        # default, so a plain `docker build` fails. CI uses the tag; the
+        # production flow pins the same base by RepoDigest via
+        # scripts/prepare_compose.py.
+        run: |
+          docker build \
+            --build-arg PYTHON_IMAGE=python:3.12-slim-bookworm \
+            -t medical-query-demo:ci .

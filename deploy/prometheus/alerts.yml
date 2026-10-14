@@ -1,0 +1,29 @@
+groups:
+  - name: medical-query
+    rules:
+      - alert: DatabaseUnavailable
+        expr: medical_query_database_ready{job="medical-query"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: Application database readiness probe failed
+      - alert: ApiErrorRateHigh
+        expr: |
+          (sum(rate(medical_query_http_requests_total{job="medical-query",route=~"/api/.*",status=~"5.."}[1m]))
+          / sum(rate(medical_query_http_requests_total{job="medical-query",route=~"/api/.*"}[1m])) > 0.05)
+          and sum(increase(medical_query_http_requests_total{job="medical-query",route=~"/api/.*"}[1m])) >= 20
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx ratio above 5 percent with at least 20 requests per window
+      - alert: FixedApiLatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(medical_query_http_request_duration_seconds_bucket{job="medical-query",route=~"/api/(summary|admissions.*)"}[1m]))) > 0.5
+          and sum(increase(medical_query_http_request_duration_seconds_count{job="medical-query",route=~"/api/(summary|admissions.*)"}[1m])) >= 20
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: Fixed API histogram p95 above 0.5 seconds with at least 20 requests

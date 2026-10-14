@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimic-inpatient-query"
+dynamic = ["version"]
+description = "Bounded queries on MIMIC-IV Demo 2.2, with reproducible operations evidence"
+requires-python = ">=3.12,<3.13"
+dependencies = ["fastapi", "uvicorn", "psycopg[binary]", "prometheus-client"]
+
+[tool.setuptools.dynamic]
+version = {attr = "medical_query.__version__"}
+
+[project.optional-dependencies]
+test = ["pytest", "httpx2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+medical_query = ["static/*.html", "static/*.css", "static/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

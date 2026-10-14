@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>住院信息查询 · MIMIC Demo</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/"><span class="brand-icon">＋</span><span>住院信息查询<small>MIMIC DEMO WORKSPACE</small></span></a>
+  <div class="nav-label">工作空间</div>
+  <button class="nav active" data-view="query"><span>⌕</span> 信息查询</button>
+  <button class="nav" data-view="ops"><span>◷</span> 服务状态</button>
+  <a class="nav" href="/docs" target="_blank" rel="noopener"><span>↗</span> 接口文档</a>
+  <div class="source-card"><span class="tiny-tag">公开脱敏样本</span><strong>MIMIC-IV Demo 2.2</strong><p>来自 PhysioNet。结果仅描述 Demo 样本，供查询与研究演示。</p><a href="https://physionet.org/content/mimic-iv-demo/2.2/" target="_blank" rel="noopener">查看官方数据来源 ↗</a></div>
+  <div class="side-footer">本机查询环境 <span id="service-dot" class="dot"></span></div>
+</aside>
+<main>
+  <header class="topbar"><span>工作空间 <span class="crumb">/</span> <span id="breadcrumb">信息查询</span></span><span class="local-badge">LOCAL · 只读查询</span></header>
+  <section id="query-view">
+    <div class="page-heading"><div><p class="eyebrow">INPATIENT EXPLORER</p><h1>从问题出发，查看住院记录</h1><p class="muted">查询条件、源记录与统计口径一起呈现。</p></div><span id="model-badge" class="status-badge">正在检查模型配置</span></div>
+    <div class="stats" id="stats"><div class="stat"><span>样本患者</span><strong id="patient-count">—</strong><small>不同 subject_id</small></div><div class="stat"><span>住院记录</span><strong id="admission-count">—</strong><small>一次住院一条记录</small></div><div class="stat"><span>含 ICU 的住院</span><strong id="icu-admissions">—</strong><small>以实际 ICU 记录判断</small></div><div class="stat"><span>ICU 入住次数</span><strong id="icu-count">—</strong><small>同次住院可多次入住</small></div></div>
+    <section class="panel query-panel">
+      <div class="panel-head"><h2>发起查询</h2><div class="tabs"><button class="tab active" data-mode="natural">中文提问</button><button class="tab" data-mode="fixed">固定条件</button></div></div>
+      <form id="natural-form"><label for="question">你想查看什么？</label><textarea id="question" rows="3" maxlength="1000" placeholder="例如：Demo 一共有多少名患者、多少次住院？" required></textarea><div class="query-bottom"><span id="model-help" class="muted">中文问题只用于规划查询；数据由本地数据库返回。</span><button class="primary" id="ask-button" type="submit">查询 <span>→</span></button></div><div class="examples"><span>试一试</span><button type="button" data-question="Demo 一共有多少名患者、多少次住院？">样本统计</button><button type="button" data-question="统计含 ICU 记录的住院次数">ICU 住院统计</button><button type="button" data-question="根据这些数据给我用药建议">范围边界</button></div></form>
+      <form id="fixed-form" hidden>
+        <div class="form-grid"><div><label for="query-kind">查询内容</label><select id="query-kind"><option value="summary">样本统计</option><option value="admissions">患者住院列表</option><option value="encounter">住院概况</option><option value="diagnoses">住院 ICD 诊断</option><option value="labs">单项检验记录</option></select></div><div id="id-field" hidden><label id="id-label" for="record-id">住院 ID · hadm_id</label><input id="record-id" inputmode="numeric" type="number" min="1" max="2147483647" placeholder="请输入明确 ID"></div><div id="icu-field"><label for="has-icu">是否含 ICU</label><select id="has-icu"><option value="">全部住院</option><option value="true">含 ICU 记录</option><option value="false">不含 ICU 记录</option></select></div><div id="lab-field" hidden><label for="lab-concept">检验项目 · 血液</label><select id="lab-concept"><option value="creatinine">血肌酐 · mg/dL</option><option value="potassium">血钾 · mEq/L</option><option value="glucose">血糖 · mg/dL</option><option value="hemoglobin">血红蛋白 · g/dL</option></select></div><div id="abnormal-field" hidden><label for="abnormal-mode">记录范围</label><select id="abnormal-mode"><option value="all">全部源记录</option><option value="source_flag">源异常标记</option><option value="reference_range">完整参考区间越界</option></select></div></div><div class="query-bottom"><span class="muted">固定条件可独立使用，不依赖模型服务。</span><button class="primary" type="submit">查询 <span>→</span></button></div>
+      </form>
+    </section>
+    <section class="panel results-panel" aria-live="polite"><div class="panel-head"><h2 id="result-title">查询结果</h2><span id="result-count" class="muted">尚未查询</span></div><div id="result-message" class="result-message" hidden></div><div id="result-content"><div class="empty"><span class="empty-symbol">⌕</span><h3>开始探索这份住院样本</h3><p>输入中文问题，或通过固定条件查询。<br>下方可浏览实际住院记录并选择一条。</p></div></div><div id="pagination" class="pagination" hidden><span id="page-label"></span><div><button id="prev-page">上一页</button><button id="next-page">下一页</button></div></div><details id="evidence" hidden><summary>查看查询条件与来源依据</summary><pre id="evidence-text"></pre></details></section>
+    <section class="panel browse-panel"><div class="panel-head"><div><h2>浏览住院样本</h2><p class="muted">选中记录可带入住院 ID，再查询概况、诊断或检验。</p></div><button id="refresh-samples" class="secondary">刷新</button></div><div id="sample-table" class="table-wrap"></div></section>
+    <div class="data-note"><strong>理解这些结果</strong><p>日期经过脱敏移位，不能当作真实医院年度。年龄为锚定年龄；ICD 是出院计费编码。缺失住院号的检验不会自动归属，空异常标记不等于正常。本系统不提供医疗诊断或治疗建议。</p></div>
+  </section>
+  <section id="ops-view" hidden><div class="page-heading"><div><p class="eyebrow">SERVICE OBSERVATION</p><h1>服务状态</h1><p class="muted">本项目运行实测 · 请求计数在应用重启后清零</p></div><button id="refresh-ops" class="secondary">刷新状态</button></div><div id="ops-cards" class="stats"></div><section class="panel"><div class="panel-head"><h2>基于当前证据的解释</h2><button id="diagnose-button" class="primary">AI 解释</button></div><p class="muted">读取本项目依赖探测及错误计数，给出人工检查建议。不会自动执行恢复操作。</p><div id="diagnosis-result" class="result-message" hidden></div><ul id="diagnosis-checks"></ul><details id="diagnosis-evidence" hidden><summary>查看引用的运行证据</summary><pre id="diagnosis-evidence-text"></pre></details></section><section class="panel"><div class="panel-head"><h2>依赖与最近错误</h2></div><pre id="ops-detail"></pre></section></section>
+  <footer>数据：MIMIC-IV Clinical Database Demo 2.2 / PhysioNet <span>查询视图：项目自建</span></footer>
+</main>
+<script src="/static/app.js" defer></script>
+</body></html>
