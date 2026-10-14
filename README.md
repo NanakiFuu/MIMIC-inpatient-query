@@ -3,6 +3,10 @@
 一个跑在本机的查询服务，数据来自 PhysioNet 公开的 MIMIC-IV Clinical Database Demo 2.2
 （100 名患者、275 次住院、140 次 ICU 入住）。
 
+MIMIC 是 Medical Information Mart for Intensive Care 的缩写，MIT 和波士顿贝斯以色列女执事
+医疗中心（BIDMC）发布的公开重症监护数据集。完整版要申请，这里用的是可以自由下载的 Demo
+小样本。
+
 可以问"这个病人住院期间肌酐怎么变化的""有糖尿病诊断的住院有哪些"这类中文问题，服务把它
 映射到一组预先写好的参数化查询上，返回结果和检验趋势图。
 
