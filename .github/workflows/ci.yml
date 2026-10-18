@@ -1,9 +1,11 @@
 # Continuous integration: run the project test suite and build the container image.
 #
-# NOT YET EXECUTED: this repository has not been pushed to GitHub, so this
-# workflow has never run. Every command it uses has been executed manually on
-# the development machine (download -> bootstrap -> import -> pytest -> docker
-# build); what remains unverified is the orchestration on a GitHub runner.
+# The workflow has run on GitHub. The first run failed on two assertions that
+# only held on the development machine; the fixed revision passed. The action
+# versions below were then bumped off the deprecated Node.js 20 runtime
+# (checkout v5, setup-python v6, upload-artifact v6 are the first majors that
+# run on Node.js 24). That bump has only been checked locally - valid YAML,
+# unchanged inputs, same runner image - and has not been executed on a runner.
 #
 # The test suite needs the official MIMIC-IV demo 2.2 CSVs and a PostgreSQL
 # instance with that data imported, so the job provisions both instead of
@@ -22,9 +24,9 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -66,7 +68,7 @@ jobs:
 
       - name: Upload the JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pytest-junit
           path: ci-tests.xml
@@ -74,7 +76,7 @@ jobs:
   image:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build the application image
         # The Dockerfile takes the base image as a build argument with no

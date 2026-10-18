@@ -109,7 +109,7 @@ def main():
         firing = {a['labels']['alertname'] for sample in result['alerts'] for a in sample['alerts'] if a['state'] == 'firing'}
         result['observed_firing_alerts'] = sorted(firing)
         result['final_active_alerts'] = prometheus('alerts')['alerts']
-        result['passed'] = {'DatabaseUnavailable', 'ApiErrorRateHigh'} <= firing and result['restored_same_summary'] and not result['final_active_alerts']
+        result['passed'] = {'DatabaseAccessNotReady', 'ApiErrorRateHigh'} <= firing and result['restored_same_summary'] and not result['final_active_alerts']
         output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
     assert result['passed']
     print(json.dumps({'passed': True, 'firing_alerts': sorted(firing), 'command_to_success_ms': result['command_to_success_ms']}))

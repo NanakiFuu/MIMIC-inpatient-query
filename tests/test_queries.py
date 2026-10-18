@@ -7,6 +7,7 @@ import pwd
 import psycopg
 import pytest
 
+from medical_query import database
 from medical_query.database import connect
 
 
@@ -198,16 +199,25 @@ def test_logs_redact_path_values_and_parameters(client,target,caplog):
         client.get(f"/api/admissions/{target['hadm_id']}?private=do-not-log")
     messages = [row.message for row in caplog.records if row.name=="medical_query"]
     assert messages
+    # The application logger carries more than one event type (the pool
+    # lifecycle event is not a request record), so the leak check applies to
+    # every record while the route assertion only applies to request records.
     for message in messages:
         assert str(target["hadm_id"]) not in message
         assert "do-not-log" not in message
-        payload = json.loads(message)
+    request_payloads = [json.loads(message) for message in messages
+                        if json.loads(message).get("event")=="request"]
+    assert request_payloads
+    for payload in request_payloads:
         assert payload["route"]=="/api/admissions/{hadm_id}"
 
 
 def test_unavailable_db_keeps_liveness_and_ops(client,monkeypatch,tmp_path):
     # Explicit configuration-failure test, not a claimed real PostgreSQL outage experiment.
+    # The endpoint is read when the pool is built, so drop the pool first; the
+    # next request has to rebuild it from the (now missing) configuration file.
     monkeypatch.setenv("MEDICAL_QUERY_DB_CONFIG",str(tmp_path/"missing-test-config.json"))
+    database.close()
     response = client.get("/health/ready")
     assert response.status_code==503
     assert response.json()["error"]=="database_configuration_unavailable"

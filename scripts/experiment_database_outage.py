@@ -1,4 +1,5 @@
 """Real project PostgreSQL outage/recovery, always attempt restoration in finally."""
+import argparse
 from datetime import datetime,timezone
 import json
 import os
@@ -28,17 +29,29 @@ def http(path,method="GET"):
 
 
 def main():
+    global OUT
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--report',type=Path,default=OUT,
+                        help='Where to write the record. The default is the original run, '
+                             'which is never overwritten; a re-run must pass a new path.')
+    OUT=parser.parse_args().report
     if os.getuid()!=0:
         raise SystemExit("Run as WSL root to control only postgresql@16-main")
     if OUT.exists():
         raise SystemExit("Experiment already recorded; do not overwrite")
     listing=subprocess.run(["/usr/sbin/runuser","-u","postgres","--","psql","-X","-At","-d","postgres",
                             "-c","SELECT datname FROM pg_database ORDER BY datname"],capture_output=True,text=True,check=True,cwd="/tmp")
-    if set(listing.stdout.splitlines())!={"postgres","template0","template1","medical_query_demo"}:
-        raise SystemExit("Unexpected database in cluster; refusing outage experiment")
+    present={name for name in listing.stdout.splitlines() if name}
+    standard={"postgres","template0","template1"}
+    # Refuse if the cluster holds anything that is neither a standard database nor
+    # one this project created, so the outage never touches someone else's data.
+    unexpected={name for name in present if name not in standard and not name.startswith("medical_query_")}
+    if unexpected:
+        raise SystemExit(f"Unexpected database in cluster; refusing outage experiment: {sorted(unexpected)}")
     subprocess.run(["systemctl","is-active","postgresql@16-main"],check=True)
     record={"source":"本项目真实故障操作与HTTP观测，非MIMIC故障数据",
-            "scope":"WSL PostgreSQL16/main only","events":[],"checks":[]}
+            "scope":"WSL PostgreSQL16/main only","events":[],"checks":[],
+            "cluster_databases":sorted(present)}
     OUT.parent.mkdir(parents=True,exist_ok=True)
     def save():
         OUT.write_text(json.dumps(record,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")

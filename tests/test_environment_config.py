@@ -5,20 +5,18 @@ from medical_query import database,model
 
 
 def test_environment_db_config_does_not_open_private_file(monkeypatch):
-    captured={}
+    # The endpoint is resolved when the pool is built, so this asserts on the
+    # settings a new pool would be created with. MEDICAL_QUERY_DB_CONFIG points
+    # at a path that must never be opened.
     monkeypatch.setenv('MEDICAL_QUERY_DB_HOST','TEST_ONLY_DATABASE')
     monkeypatch.setenv('MEDICAL_QUERY_DB_PORT','15432')
     monkeypatch.setenv('MEDICAL_QUERY_DB_PASSWORD','TEST_ONLY_NOT_A_REAL_PASSWORD')
     monkeypatch.setenv('MEDICAL_QUERY_DB_CONFIG','TEST_ONLY_MUST_NOT_OPEN')
-    def connect(**settings):
-        captured.update(settings)
-        return object()
-    monkeypatch.setattr(database.psycopg,'connect',connect)
-    database.connect()
-    assert captured['host']=='TEST_ONLY_DATABASE' and captured['port']==15432
-    assert captured['dbname']=='medical_query_demo' and captured['user']=='medical_query_reader'
-    assert 'default_transaction_read_only=on' in captured['options']
-    assert captured['connect_timeout']==2
+    settings = database.connection_settings()
+    assert settings['host']=='TEST_ONLY_DATABASE' and settings['port']==15432
+    assert settings['dbname']=='medical_query_demo' and settings['user']=='medical_query_reader'
+    assert 'default_transaction_read_only=on' in settings['options']
+    assert settings['connect_timeout']==2
 
 
 def test_empty_environment_db_password_is_rejected(monkeypatch):

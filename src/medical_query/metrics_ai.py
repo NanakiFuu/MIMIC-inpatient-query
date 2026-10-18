@@ -37,7 +37,7 @@ WHITELIST = {
     'compose_app_target_up': ('up{job="medical-query-compose"}', 'Prometheus can scrape the container application (1) or not (0).'),
     'node_target_up': ('up{job="node"}', 'node_exporter reachable (1) or not (0).'),
     'prometheus_target_up': ('up{job="prometheus"}', 'Prometheus scraping itself (1) or not (0).'),
-    'database_ready': ('min(medical_query_database_ready) or vector(0)', 'Application database probe succeeded with imported rows (1) or failed (0); min across all scraped app instances.'),
+    'database_ready': ('min(medical_query_database_ready) or vector(0)', 'Whether each application instance could serve a database-backed request at the last scrape (1) or not (0); min across all scraped app instances. 0 covers both an unreachable database and a connection pool that could not lend a connection in time, so it is not proof that the database is down.'),
     'http_requests_per_second': (f'sum(rate(medical_query_http_requests_total[{WINDOW}])) or vector(0)', f'Completed HTTP requests per second over {WINDOW}.'),
     'http_5xx_per_second': (f'sum(rate(medical_query_http_requests_total{{status=~"5.."}}[{WINDOW}])) or vector(0)', f'HTTP 5xx responses per second over {WINDOW}.'),
     'http_5xx_ratio': (f'(sum(rate(medical_query_http_requests_total{{status=~"5.."}}[{WINDOW}])) or vector(0)) / clamp_min(sum(rate(medical_query_http_requests_total[{WINDOW}])) or vector(0), 0.001)', f'Share of requests that returned 5xx over {WINDOW}.'),
@@ -53,7 +53,7 @@ FINDINGS = {
     'healthy': '白名单指标均在演示阈值内，未发现故障证据。累计计数本身不能证明性能问题。',
     'app_target_down': 'Prometheus 无法抓取 systemd 应用实例，说明该实例未提供 /metrics；不等于数据库故障。',
     'compose_app_target_down': 'Prometheus 无法抓取容器应用实例；systemd 实例是否正常需另看对应指标。',
-    'database_unavailable': '应用数据库探测失败（database_ready=0），当前证据只能确认连接或数据库依赖异常，不能直接认定数据库服务已停止。',
+    'database_unavailable': '应用数据库访问路径不就绪（database_ready=0）：可能是数据库不可达，也可能是连接池在超时内没借出连接。当前证据只能确认访问路径异常，不能直接认定数据库服务已停止。',
     'high_error_rate': 'HTTP 5xx 比例超过演示阈值，需要结合日志与依赖状态定位，不能仅凭比例判断根因。',
     'high_latency': 'HTTP p95 超过演示阈值，可能是负载、资源或下游依赖，当前证据不足以确定根因。',
     'resource_saturation': 'CPU、内存或磁盘可用量达到演示阈值，属于资源压力信号，不是应用逻辑错误的直接证据。',
@@ -172,7 +172,7 @@ def rule_assessment(snapshot):
 SYSTEM_PROMPT = (
     '你是本项目只读运维证据解释器，只能使用给定的 Prometheus 白名单指标（均为聚合数字）。'
     '规则：应用目标抓取失败用 app_target_down；容器应用目标抓取失败用 compose_app_target_down；'
-    'database_ready 为 0 用 database_unavailable（不能推断服务已停止、磁盘损坏或网络故障）；'
+    'database_ready 为 0 用 database_unavailable（含义是应用数据库访问路径不就绪，可能是连接池借连接超时或数据库连接失败；不能推断服务已停止、磁盘损坏或网络故障）；'
     '5xx 比例超过 0.05 用 high_error_rate；p95 超过 0.5 秒用 high_latency；'
     'CPU 忙比例超过 0.90 或每核 load1 超过 1.0 或可用内存低于 5% 或根分区可用低于 5% 用 resource_saturation；'
     'firing_alerts 大于 0 且以上都不成立用 alert_firing；全部正常用 healthy；'

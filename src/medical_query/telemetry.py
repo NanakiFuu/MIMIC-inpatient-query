@@ -7,7 +7,7 @@ REQUESTS = Counter('medical_query_http_requests_total', 'Completed HTTP requests
 DURATION = Histogram('medical_query_http_request_duration_seconds', 'HTTP handler elapsed time',
                      ['method', 'route'], buckets=(.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30), registry=REGISTRY)
 ERRORS = Counter('medical_query_http_errors_total', 'HTTP 5xx errors', ['route'], registry=REGISTRY)
-DATABASE_READY = Gauge('medical_query_database_ready', 'Reachable database with imported encounter rows', registry=REGISTRY)
+DATABASE_READY = Gauge('medical_query_database_ready', 'The application could serve a database-backed request at the last scrape (1) or not (0). 0 means the access path was not usable: the database may be unreachable, or the connection pool may not have lent a connection in time. It is not proof that the database is down', registry=REGISTRY)
 MODEL_CALLS = Counter('medical_query_model_calls_total', 'Acquired model stages; includes provider and local validation',
                       ['stage', 'outcome'], registry=REGISTRY)
 MODEL_DURATION = Histogram('medical_query_model_duration_seconds', 'Acquired model stage duration including validation',

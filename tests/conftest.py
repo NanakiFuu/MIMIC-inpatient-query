@@ -5,9 +5,17 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 import pytest
 
+from medical_query import database
 from medical_query.api import app
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _isolate_connection_pool():
+    """The pool is a process-wide singleton; give every test a fresh one."""
+    yield
+    database.close()
 
 
 @pytest.fixture(scope="session")

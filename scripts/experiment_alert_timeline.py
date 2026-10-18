@@ -14,7 +14,7 @@ from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'evidence/p2/0c-alert-timeline/outage-alert-timeline.json'
-ALERTS = ['DatabaseUnavailable', 'ApiErrorRateHigh', 'FixedApiLatencyHigh']
+ALERTS = ['DatabaseAccessNotReady', 'ApiErrorRateHigh', 'FixedApiLatencyHigh']
 POLL = 2.0
 TRAFFIC_INTERVAL = 0.2
 
@@ -86,7 +86,7 @@ def main():
         deadline = time.time() + 120
         while time.time() < deadline:
             states = poll(POLL)
-            if states['DatabaseUnavailable'] == 'firing' and states['ApiErrorRateHigh'] == 'firing':
+            if states['DatabaseAccessNotReady'] == 'firing' and states['ApiErrorRateHigh'] == 'firing':
                 break
         event('target_alerts_firing')
         poll(10)
@@ -117,7 +117,7 @@ def main():
     print(json.dumps({'reached_pending': result['reached_pending'], 'reached_firing': result['reached_firing'],
                       'never_fired': result['never_fired'], 'all_resolved': result['all_resolved'],
                       'transitions': result['transitions'], 'traffic': traffic}))
-    assert 'DatabaseUnavailable' in result['reached_firing'] and result['all_resolved']
+    assert 'DatabaseAccessNotReady' in result['reached_firing'] and result['all_resolved']
 
 
 if __name__ == '__main__':

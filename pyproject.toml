@@ -7,7 +7,7 @@ name = "mimic-inpatient-query"
 dynamic = ["version"]
 description = "Bounded queries on MIMIC-IV Demo 2.2, with reproducible operations evidence"
 requires-python = ">=3.12,<3.13"
-dependencies = ["fastapi", "uvicorn", "psycopg[binary]", "prometheus-client"]
+dependencies = ["fastapi", "uvicorn", "psycopg[binary,pool]", "prometheus-client"]
 
 [tool.setuptools.dynamic]
 version = {attr = "medical_query.__version__"}

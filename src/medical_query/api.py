@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -13,14 +14,32 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 import psycopg
+from psycopg_pool import PoolTimeout
 
 from . import queries
 from .database import connect
-from . import model, planning, diagnostics, telemetry, metrics_ai
+from . import database, model, planning, diagnostics, telemetry, metrics_ai
 from . import __version__
 
+
+@asynccontextmanager
+async def lifespan(_app):
+    """Build this process's connection pool, and release it on exit.
+
+    A missing or malformed local credential file must not stop the process from
+    starting: requests report it as 503, which is what they did before the pool.
+    """
+    try:
+        database.pool()
+    except Exception:
+        logging.getLogger("medical_query").warning(json.dumps({"event":"pool_startup_skipped"}))
+    yield
+    database.close()
+
+
 app = FastAPI(title="MIMIC Demo 住院查询",version=__version__,
-              description="MIMIC-IV Clinical Database Demo 2.2；项目自建只读视图；受限工具规划与固定查询。")
+              description="MIMIC-IV Clinical Database Demo 2.2；项目自建只读视图；受限工具规划与固定查询。",
+              lifespan=lifespan)
 STATIC = Path(__file__).resolve().parent / "static"
 app.mount("/static",StaticFiles(directory=STATIC),name="static")
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=["localhost","127.0.0.1","[::1]"])
@@ -56,6 +75,10 @@ def paired_icd(code,version):
 
 
 def db_error(exc):
+    # Pool exhaustion is a different failure from an unreachable database, and
+    # it is the one that must never turn into an unbounded wait.
+    if isinstance(exc,PoolTimeout):
+        return 503,"database_pool_timeout"
     if isinstance(exc,psycopg.errors.QueryCanceled):
         return 504,"database_query_timeout"
     if isinstance(exc,psycopg.errors.LockNotAvailable):

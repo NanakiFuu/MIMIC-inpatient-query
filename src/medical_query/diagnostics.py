@@ -10,6 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel,ConfigDict,Field,ValidationError
 import psycopg
+from psycopg_pool import PoolTimeout
 
 from .database import connect
 from . import model, telemetry
@@ -44,6 +45,11 @@ def observe(metrics):
         with connect() as conn:
             conn.execute("SELECT 1").fetchone()
         database["reachable"]=True
+    except PoolTimeout:
+        # No connection could be borrowed in time. On its own that does not prove
+        # the database is down, so it must not be labelled like a connection
+        # error: PoolTimeout subclasses OperationalError.
+        database["error"]="pool_timeout"
     except psycopg.Error as error:
         database["error"]="connection_error" if isinstance(error,psycopg.OperationalError) else "database_error"
     except (OSError,ValueError):

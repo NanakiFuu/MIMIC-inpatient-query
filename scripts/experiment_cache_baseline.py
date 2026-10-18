@@ -85,10 +85,15 @@ def under_load(url, workers, seconds):
 
 
 def main():
+    global BASE
     parser = argparse.ArgumentParser()
     parser.add_argument('--report', type=Path,
                         default=ROOT / 'evidence/p2/10-cache-baseline/cache-baseline.json')
+    parser.add_argument('--base-url', default=BASE,
+                        help='Base URL to measure; defaults to the systemd instance on 8765. '
+                             'Point it elsewhere to measure another instance of the same code.')
     args = parser.parse_args()
+    BASE = args.base_url.rstrip('/')
     if args.report.exists():
         raise SystemExit('Refusing to overwrite evidence; pass --report with a new path')
 

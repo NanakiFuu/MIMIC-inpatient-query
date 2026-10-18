@@ -1,13 +1,18 @@
 groups:
   - name: medical-query
     rules:
-      - alert: DatabaseUnavailable
+      - alert: DatabaseAccessNotReady
         expr: medical_query_database_ready{job="medical-query"} == 0
         for: 15s
         labels:
           severity: critical
         annotations:
-          summary: Application database readiness probe failed
+          summary: The application's database access path is not ready
+          description: >-
+            The readiness gauge is 0, so a database-backed request could not be served. This does
+            not distinguish an unreachable database from a connection pool that could not lend a
+            connection in time; check the application log before concluding that the database is
+            down.
       - alert: ApiErrorRateHigh
         expr: |
           (sum(rate(medical_query_http_requests_total{job="medical-query",route=~"/api/.*",status=~"5.."}[1m]))
